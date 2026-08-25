@@ -508,6 +508,7 @@ namespace IntelOrca.PeggleEdit.Designer
             mContextMenu.Items.Add(new ToolStripMenuItem("Export (Pego)", Resources.export_16, mnuLevelExportPego_Click));
             mContextMenu.Items.Add(new ToolStripMenuItem("Export (Deluxe)", Resources.export_16, mnuLevelExportDeluxe_Click));
             mContextMenu.Items.Add(new ToolStripMenuItem("Export (Nights)", Resources.export_16, mnuLevelExportNights_Click));
+            mContextMenu.Items.Add(new ToolStripMenuItem("Export (JSON)", Resources.export_16, mnuLevelExportJson_Click));
             mContextMenu.Items.Add(new ToolStripSeparator());
             mContextMenu.Items.Add(new ToolStripMenuItem("Properties", Resources.properties_16, mnuLevelProperties_Click));
             mContextMenu.Items.Add(new ToolStripMenuItem("Set Background", Resources.image_16, mnuSetBackground_Click));
@@ -540,6 +541,53 @@ namespace IntelOrca.PeggleEdit.Designer
         private void mnuLevelExportPego_Click(object sender, EventArgs e) => ExportLevel(LevelWriter.PegoFileVersion);
         private void mnuLevelExportDeluxe_Click(object sender, EventArgs e) => ExportLevel(LevelWriter.DeluxeFileVersion);
         private void mnuLevelExportNights_Click(object sender, EventArgs e) => ExportLevel(LevelWriter.DefaultFileVersion);
+
+        private void mnuLevelExportJson_Click(object sender, EventArgs e)
+        {
+            var level = SelectedNode.Tag as Level;
+            if (level == null)
+                return;
+
+            using (var dialog = new SaveFileDialog())
+            {
+                dialog.Title = "Export level as JSON";
+                dialog.Filter = "JSON Files (*.json)|*.json";
+                dialog.FileName = SanitiseFileName(level.Info.Name) + ".json";
+                if (dialog.ShowDialog() != DialogResult.OK)
+                    return;
+
+                try
+                {
+                    var result = LevelJsonExporter.Export(level, dialog.FileName);
+
+                    if (result.Warnings.Count > 0)
+                    {
+                        MessageBox.Show(
+                            "Level exported, but some images could not be written:" +
+                            Environment.NewLine + Environment.NewLine +
+                            string.Join(Environment.NewLine, result.Warnings.ToArray()),
+                            "Export Warnings", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "Failed to export level as JSON:" + Environment.NewLine + ex.Message,
+                        "Export Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private static string SanitiseFileName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return "level";
+
+            foreach (char c in Path.GetInvalidFileNameChars())
+                name = name.Replace(c, '_');
+
+            return name;
+        }
 
         private void ExportLevel(int version)
         {
